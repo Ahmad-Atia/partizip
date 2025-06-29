@@ -1,0 +1,38 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: community-service
+  
+  # Database Configuration
+  datasource:
+    url: jdbc:mysql://host.docker.internal:3307/partizip_db  # Changed to port 3307
+    username: partizip_user
+    password: partizip_pass
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.partizip: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

@@ -1,0 +1,340 @@
+# 🌩️ Thunder Client Testing Guide - Community Service
+
+## 📋 Voraussetzungen
+
+1. **Thunder Client Extension** in VS Code installiert
+2. **Community Service** läuft auf `http://localhost:8082`
+3. **MySQL Database** ist verfügbar oder H2 für Tests
+
+## 🚀 Service starten
+
+```bash
+# Im community-service Verzeichnis
+cd partizip/community-service
+
+# Mit Maven starten
+mvn spring-boot:run
+
+# Oder mit Docker
+docker-compose up -d
+```
+
+---
+
+## 📡 API Endpoints Testing
+
+### 1. 📝 POST erstellen
+
+**Request:**
+```
+Method: POST
+URL: http://localhost:8082/api/community/posts
+Headers: Content-Type: application/json
+```
+
+**Body (JSON):**
+```json
+{
+  "authorID": "123e4567-e89b-12d3-a456-426614174000",
+  "content": "Dies ist mein erster Test-Post! 🎉",
+  "mediaUrl": "https://example.com/image.jpg",
+  "taggedEventId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Expected Response (201 Created):**
+```json
+{
+  "postID": "generated-uuid",
+  "authorID": "123e4567-e89b-12d3-a456-426614174000",
+  "content": "Dies ist mein erster Test-Post! 🎉",
+  "mediaUrl": "https://example.com/image.jpg",
+  "likeUserIds": [],
+  "createdAt": "2025-06-29T10:30:00",
+  "taggedEventId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+---
+
+### 2. 📊 Poll erstellen
+
+**Request:**
+```
+Method: POST
+URL: http://localhost:8082/api/community/polls
+Headers: Content-Type: application/json
+```
+
+**Body (JSON):**
+```json
+{
+  "authorID": "123e4567-e89b-12d3-a456-426614174000",
+  "question": "Was ist eure Lieblings-Programmiersprache?",
+  "options": ["Java", "Python", "JavaScript", "C#", "Go"]
+}
+```
+
+**Expected Response (201 Created):**
+```json
+{
+  "pollID": "generated-uuid",
+  "authorID": "123e4567-e89b-12d3-a456-426614174000",
+  "question": "Was ist eure Lieblings-Programmiersprache?",
+  "options": {
+    "Java": 0,
+    "Python": 0,
+    "JavaScript": 0,
+    "C#": 0,
+    "Go": 0
+  },
+  "votes": {},
+  "createdAt": "2025-06-29T10:30:00"
+}
+```
+
+---
+
+### 3. 💬 Kommentar hinzufügen
+
+**Request:**
+```
+Method: POST
+URL: http://localhost:8082/api/community/comments/{POST_ID_FROM_STEP_1}
+Headers: Content-Type: application/json
+```
+
+**Body (JSON):**
+```json
+{
+  "authorID": "456e7890-e12b-34c5-d678-901234567890",
+  "content": "Großartiger Post! 👍 Ich stimme vollkommen zu."
+}
+```
+
+**Expected Response (201 Created):**
+```json
+{
+  "commentID": "generated-uuid",
+  "content": "Großartiger Post! 👍 Ich stimme vollkommen zu.",
+  "authorID": "456e7890-e12b-34c5-d678-901234567890",
+  "targetID": "post-id-from-step-1",
+  "createdAt": "2025-06-29T10:35:00"
+}
+```
+
+---
+
+### 4. ❤️ Post liken
+
+**Request:**
+```
+Method: POST
+URL: http://localhost:8082/api/community/posts/{POST_ID_FROM_STEP_1}/like?userId=789e0123-e45f-67g8-h901-234567890123
+```
+
+**Expected Response (200 OK):**
+```
+Post liked successfully
+```
+
+---
+
+### 5. 🔄 Post teilen
+
+**Request:**
+```
+Method: POST
+URL: http://localhost:8082/api/community/posts/{POST_ID_FROM_STEP_1}/share?userId=789e0123-e45f-67g8-h901-234567890123
+```
+
+**Expected Response (200 OK):**
+```
+Post shared successfully
+```
+
+---
+
+### 6. 🗳️ In Poll abstimmen
+
+**Request:**
+```
+Method: POST
+URL: http://localhost:8082/api/community/polls/{POLL_ID_FROM_STEP_2}/vote
+Headers: Content-Type: application/json
+```
+
+**Body (JSON):**
+```json
+{
+  "userID": "789e0123-e45f-67g8-h901-234567890123",
+  "option": "Java"
+}
+```
+
+**Expected Response (200 OK):**
+```
+Vote registered successfully
+```
+
+---
+
+## 🧪 Thunder Client Collections
+
+### Collection: Community Service Tests
+
+**Erstellen Sie eine neue Collection in Thunder Client:**
+
+1. Öffnen Sie Thunder Client (Blitz-Symbol in der Seitenleiste)
+2. Klicken Sie auf "New Collection"
+3. Name: "Community Service API Tests"
+
+**Fügen Sie folgende Requests hinzu:**
+
+#### Request 1: Create Post
+- **Name:** "1. Create Test Post"
+- **Method:** POST
+- **URL:** `{{baseUrl}}/posts`
+- **Body:** JSON aus Schritt 1 oben
+
+#### Request 2: Create Poll  
+- **Name:** "2. Create Test Poll"
+- **Method:** POST
+- **URL:** `{{baseUrl}}/polls`
+- **Body:** JSON aus Schritt 2 oben
+
+#### Request 3: Add Comment
+- **Name:** "3. Add Comment to Post"
+- **Method:** POST
+- **URL:** `{{baseUrl}}/comments/{{postId}}`
+- **Body:** JSON aus Schritt 3 oben
+
+#### Request 4: Like Post
+- **Name:** "4. Like Post"
+- **Method:** POST
+- **URL:** `{{baseUrl}}/posts/{{postId}}/like?userId={{userId}}`
+
+#### Request 5: Share Post
+- **Name:** "5. Share Post"
+- **Method:** POST
+- **URL:** `{{baseUrl}}/posts/{{postId}}/share?userId={{userId}}`
+
+#### Request 6: Vote in Poll
+- **Name:** "6. Vote in Poll"
+- **Method:** POST
+- **URL:** `{{baseUrl}}/polls/{{pollId}}/vote`
+- **Body:** JSON aus Schritt 6 oben
+
+---
+
+## 🔧 Environment Variables
+
+**Erstellen Sie ein Environment in Thunder Client:**
+
+1. Klicken Sie auf "Env" Tab
+2. Erstellen Sie "Community Service Local"
+3. Fügen Sie folgende Variablen hinzu:
+
+```json
+{
+  "baseUrl": "http://localhost:8082/api/community",
+  "postId": "wird-nach-post-creation-gesetzt",
+  "pollId": "wird-nach-poll-creation-gesetzt", 
+  "userId": "789e0123-e45f-67g8-h901-234567890123",
+  "authorId": "123e4567-e89b-12d3-a456-426614174000",
+  "commentAuthorId": "456e7890-e12b-34c5-d678-901234567890"
+}
+```
+
+---
+
+## 📊 Test Scenarios
+
+### Scenario 1: Happy Path
+1. ✅ Create Post → Status 201
+2. ✅ Create Poll → Status 201
+3. ✅ Add Comment → Status 201
+4. ✅ Like Post → Status 200
+5. ✅ Share Post → Status 200
+6. ✅ Vote in Poll → Status 200
+
+### Scenario 2: Error Cases
+1. ❌ Create Post with missing data → Status 400
+2. ❌ Comment on non-existent post → Status 404
+3. ❌ Like non-existent post → Status 404
+4. ❌ Vote with invalid option → Status 400
+5. ❌ Vote twice (same user) → Status 400
+
+### Scenario 3: Edge Cases
+1. 🔄 Like same post twice (should be idempotent)
+2. 🔄 Vote update (change vote to different option)
+3. 📝 Very long content (test limits)
+4. 🔗 Invalid UUID formats
+
+---
+
+## 🐛 Debugging Tips
+
+### Common Issues:
+
+**1. Connection Refused (ECONNREFUSED)**
+```bash
+# Check if service is running
+curl http://localhost:8082/actuator/health
+
+# Start service if not running
+mvn spring-boot:run
+```
+
+**2. 404 Not Found**
+- ✅ Check URL: `http://localhost:8082/api/community/posts`
+- ✅ Verify base path `/api/community`
+
+**3. 400 Bad Request**
+- ✅ Check JSON syntax
+- ✅ Verify required fields (authorID, content)
+- ✅ Check UUID format
+
+**4. 500 Internal Server Error**
+- ✅ Check application logs
+- ✅ Verify database connection
+- ✅ Check for missing dependencies
+
+### Logging:
+```bash
+# Check application logs
+tail -f logs/community-service.log
+
+# Or in Docker
+docker logs community-service -f
+```
+
+---
+
+## 📈 Response Validation
+
+### Success Indicators:
+- ✅ **Status Codes:** 200 (OK), 201 (Created)
+- ✅ **Response Time:** < 500ms
+- ✅ **Valid JSON:** Proper structure returned
+- ✅ **UUID Format:** Valid UUID in responses
+
+### Data Validation:
+- ✅ **Timestamps:** ISO 8601 format
+- ✅ **Like Counts:** Incremental behavior
+- ✅ **Vote Counts:** Proper tallying
+- ✅ **Content:** No XSS or injection
+
+---
+
+## 🚀 Quick Start Checklist
+
+1. **[ ]** Thunder Client Extension installed
+2. **[ ]** Community Service running on port 8082
+3. **[ ]** Collection "Community Service API Tests" created
+4. **[ ]** Environment variables configured
+5. **[ ]** Test Scenario 1 (Happy Path) executed
+6. **[ ]** All endpoints return expected status codes
+7. **[ ]** Response data matches expected format
+
+**Ready to test! 🎯**

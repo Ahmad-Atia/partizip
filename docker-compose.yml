@@ -1,0 +1,110 @@
+version: '3.8'
+
+services:
+  # Database
+  mysql-db:
+    image: mysql:8.0
+    container_name: partizip-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: partizip_db
+      MYSQL_USER: partizip_user
+      MYSQL_PASSWORD: partizip_pass
+    ports:
+      - "3307:3306"  # Changed from 3306:3306 to 3307:3306
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - partizip-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # User Service
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    container_name: user-service
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/partizip_db  # Internal port stays 3306
+      - SPRING_DATASOURCE_USERNAME=partizip_user
+      - SPRING_DATASOURCE_PASSWORD=partizip_pass
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    networks:
+      - partizip-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway-service/Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    networks:
+      - partizip-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Community Service
+  community-service:
+    build:
+      context: .
+      dockerfile: community-service/Dockerfile
+    container_name: community-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    networks:
+      - partizip-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Event Service
+  event-service:
+    build:
+      context: .
+      dockerfile: event-service/Dockerfile
+    container_name: event-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    networks:
+      - partizip-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  partizip-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
