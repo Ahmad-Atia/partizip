@@ -1,5 +1,24 @@
 package com.partizip.community.controller;
 
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.partizip.community.dto.CreateCommentDTO;
 import com.partizip.community.dto.CreatePollDTO;
 import com.partizip.community.dto.CreatePostDTO;
@@ -8,21 +27,11 @@ import com.partizip.community.entity.Comment;
 import com.partizip.community.entity.Poll;
 import com.partizip.community.entity.Post;
 import com.partizip.community.service.CommunityService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/community")
+@RequestMapping("/")
 @Validated
 @CrossOrigin(origins = "*")
 public class CommunityController {
@@ -70,7 +79,7 @@ public class CommunityController {
     }
 
     @GetMapping("/posts/{postId}")
-    public ResponseEntity<Post> getPost(@PathVariable UUID postId) {
+    public ResponseEntity<Post> getPost(@PathVariable("postId") UUID postId) {
         try {
             Post post = communityService.getPost(postId);
             return ResponseEntity.ok(post);
@@ -84,7 +93,8 @@ public class CommunityController {
     }
 
     @PostMapping("/posts/{postId}/like")
-    public ResponseEntity<Map<String, Object>> likePost(@PathVariable UUID postId, @RequestParam UUID userId) {
+    public ResponseEntity<Map<String, Object>> likePost(@PathVariable("postId") UUID postId, 
+                                                   @RequestParam("userId") UUID userId) {
         try {
             logger.info("User {} attempting to like post {}", userId, postId);
             boolean liked = communityService.likePost(postId, userId);
@@ -106,7 +116,8 @@ public class CommunityController {
     }
 
     @PostMapping("/posts/{postId}/share")
-    public ResponseEntity<Map<String, Object>> sharePost(@PathVariable UUID postId, @RequestParam UUID userId) {
+    public ResponseEntity<Map<String, Object>> sharePost(@PathVariable("postId") UUID postId, 
+                                                    @RequestParam("userId") UUID userId) {
         try {
             logger.info("User {} sharing post {}", userId, postId);
             communityService.sharePost(postId, userId);
@@ -151,8 +162,10 @@ public class CommunityController {
         }
     }
 
+    // KORRIGIERT: Explizite Parameter-Namen
     @PostMapping("/polls/{pollId}/vote")
-    public ResponseEntity<Map<String, Object>> vote(@PathVariable UUID pollId, @Valid @RequestBody VoteDTO voteDTO) {
+    public ResponseEntity<Map<String, Object>> vote(@PathVariable("pollId") UUID pollId, 
+                                               @Valid @RequestBody VoteDTO voteDTO) {
         try {
             logger.info("Vote attempt on poll {} by user {}", pollId, voteDTO.getUserID());
             boolean voted = communityService.vote(pollId, voteDTO);
@@ -174,10 +187,10 @@ public class CommunityController {
         }
     }
 
-    // Comment endpoints
+    // Comment endpoints - KORRIGIERT
     @PostMapping("/comments/{targetId}")
-    public ResponseEntity<Map<String, UUID>> addComment(@PathVariable UUID targetId, 
-                                                       @Valid @RequestBody CreateCommentDTO createCommentDTO) {
+    public ResponseEntity<Map<String, UUID>> addComment(@PathVariable("targetId") UUID targetId, 
+                                                   @Valid @RequestBody CreateCommentDTO createCommentDTO) {
         try {
             logger.info("Adding comment to target {} by author {}", targetId, createCommentDTO.getAuthorID());
             UUID commentId = communityService.addComment(targetId, createCommentDTO);
@@ -193,7 +206,7 @@ public class CommunityController {
     }
 
     @GetMapping("/comments/{targetId}")
-    public ResponseEntity<List<Comment>> getCommentsByTarget(@PathVariable UUID targetId) {
+    public ResponseEntity<List<Comment>> getCommentsByTarget(@PathVariable("targetId") UUID targetId) {
         try {
             List<Comment> comments = communityService.getCommentsByTarget(targetId);
             return ResponseEntity.ok(comments);
