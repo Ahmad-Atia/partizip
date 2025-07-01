@@ -8,21 +8,21 @@ spring:
     gateway:
       routes:
         - id: community-service
-          uri: http://community-service:8081
+          uri: http://community-service:3002
           predicates:
             - Path=/api/community/**
           filters:
             - StripPrefix=2
             
         - id: event-service
-          uri: http://event-service:8082
+          uri: http://event-service:3003
           predicates:
             - Path=/api/events/**
           filters:
             - StripPrefix=2
             
         - id: user-service
-          uri: http://user-service:8083
+          uri: http://user-service:3001
           predicates:
             - Path=/api/users/**
           filters:
