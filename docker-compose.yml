@@ -38,6 +38,12 @@ services:
     depends_on:
       mysql-db:
         condition: service_healthy
+      user-service:
+        condition: service_healthy
+      community-service:
+        condition: service_healthy
+      event-service:
+        condition: service_healthy
     networks:
       - partizip-network
     healthcheck:
