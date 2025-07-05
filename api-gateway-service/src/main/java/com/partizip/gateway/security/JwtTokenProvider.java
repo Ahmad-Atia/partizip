@@ -1,17 +1,23 @@
 package com.partizip.gateway.security;
 
-import com.partizip.gateway.dto.AuthToken;
-import com.partizip.gateway.interfaces.TokenProvider;
-import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
-import javax.crypto.SecretKey;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.UUID;
+
+import javax.crypto.SecretKey;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import com.partizip.gateway.dto.AuthToken;
+import com.partizip.gateway.interfaces.TokenProvider;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 
 @Component
 public class JwtTokenProvider implements TokenProvider {
@@ -38,7 +44,7 @@ public class JwtTokenProvider implements TokenProvider {
                 .compact();
         
         LocalDateTime expiresAt = LocalDateTime.ofInstant(expiryDate.toInstant(), ZoneId.systemDefault());
-        return new AuthToken(token, expiresAt);
+        return new AuthToken(token, expiresAt, userID);
     }
     
     @Override

@@ -1,15 +1,18 @@
 package com.partizip.gateway.service;
 
+import java.util.UUID;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+
 import com.partizip.gateway.dto.ApiRequest;
 import com.partizip.gateway.dto.AuthToken;
 import com.partizip.gateway.dto.Credentials;
 import com.partizip.gateway.interfaces.SecurityHandler;
 import com.partizip.gateway.interfaces.TokenProvider;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 
-import java.util.UUID;
+import reactor.core.publisher.Mono;
 
 @Service
 public class AuthService implements SecurityHandler {
@@ -20,14 +23,41 @@ public class AuthService implements SecurityHandler {
     @Autowired
     private WebClient.Builder webClientBuilder;
     
-    public AuthToken authenticate(Credentials credentials) {
-        // TODO: Implement actual authentication logic
-        // For now, simulate authentication
-        if (isValidCredentials(credentials)) {
-            UUID userID = UUID.randomUUID(); // In real implementation, get from user service
-            return tokenProvider.generateToken(userID);
-        }
-        throw new RuntimeException("Invalid credentials");
+    public Mono<AuthToken> authenticate(Credentials credentials) {
+        return authenticateWithUserService(credentials)
+            .map(userID -> {
+                if (userID != null) {
+                    return tokenProvider.generateToken(userID);
+                }
+                throw new RuntimeException("Invalid credentials");
+            })
+            .onErrorMap(e -> new RuntimeException("Authentication failed: " + e.getMessage()));
+    }
+    
+    private Mono<UUID> authenticateWithUserService(Credentials credentials) {
+        // Create request body for user service
+        UserServiceCredentialsRequest request = new UserServiceCredentialsRequest();
+        request.setEmail(credentials.getUsername());
+        request.setPassword(credentials.getPassword());
+        
+        // Call user service internal endpoint - non-blocking
+        WebClient webClient = webClientBuilder.build();
+        return webClient
+            .post()
+            .uri("http://user-service:3001/internal/verify-credentials")
+            .bodyValue(request)
+            .retrieve()
+            .bodyToMono(UserServiceCredentialsResponse.class)
+            .map(response -> {
+                if (response != null && response.isValid()) {
+                    return UUID.fromString(response.getUserId());
+                }
+                return null;
+            })
+            .onErrorResume(e -> {
+                System.err.println("Failed to authenticate with user service: " + e.getMessage());
+                return Mono.just(null);
+            });
     }
     
     public boolean authorize(AuthToken token, String resource) {
@@ -70,11 +100,27 @@ public class AuthService implements SecurityHandler {
         return false;
     }
     
-    private boolean isValidCredentials(Credentials credentials) {
-        // TODO: Implement actual credential validation against user service
-        // For now, simulate validation
-        return credentials != null && 
-               credentials.getUsername() != null && 
-               credentials.getPassword() != null;
+    // DTO classes for User service communication
+    public static class UserServiceCredentialsRequest {
+        private String email;
+        private String password;
+        
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        public String getPassword() { return password; }
+        public void setPassword(String password) { this.password = password; }
+    }
+    
+    public static class UserServiceCredentialsResponse {
+        private String userId;
+        private String email;
+        private boolean valid;
+        
+        public String getUserId() { return userId; }
+        public void setUserId(String userId) { this.userId = userId; }
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        public boolean isValid() { return valid; }
+        public void setValid(boolean valid) { this.valid = valid; }
     }
 }

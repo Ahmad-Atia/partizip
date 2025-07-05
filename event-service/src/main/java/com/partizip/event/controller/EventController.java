@@ -38,7 +38,7 @@ public class EventController {
     }
     
     @GetMapping("/events/{id}")
-    public ResponseEntity<Event> eventDetails(@PathVariable UUID id) {
+    public ResponseEntity<Event> eventDetails(@PathVariable (value = "id") UUID id) {
         return eventService.getEventById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -52,8 +52,8 @@ public class EventController {
     
     @PostMapping("/events/{eventId}/participants")
     public ResponseEntity<Map<String, Object>> manageParticipation(
-            @PathVariable UUID eventId, 
-            @RequestParam UUID userId) {
+            @PathVariable(value = "eventId") UUID eventId, 
+            @RequestParam(value = "userId") UUID userId) {
         try {
             eventService.registerParticipant(eventId, userId);
             return ResponseEntity.ok(Map.of(
@@ -68,7 +68,7 @@ public class EventController {
     
     @PostMapping("/events/{eventId}/feedback")
     public ResponseEntity<Feedback> addFeedback(
-            @PathVariable UUID eventId, 
+            @PathVariable(value = "eventId") UUID eventId, 
             @RequestBody Feedback feedback) {
         Feedback addedFeedback = eventService.addFeedback(eventId, feedback);
         return ResponseEntity.ok(addedFeedback);

@@ -35,11 +35,8 @@ public class ApiGatewayController {
     
     @PostMapping("/auth/login")
     public Mono<ResponseEntity<AuthToken>> login(@RequestBody Credentials credentials) {
-        try {
-            AuthToken token = authService.authenticate(credentials);
-            return Mono.just(ResponseEntity.ok(token));
-        } catch (Exception e) {
-            return Mono.just(ResponseEntity.status(401).build());
-        }
+        return authService.authenticate(credentials)
+            .map(token -> ResponseEntity.ok(token))
+            .onErrorReturn(ResponseEntity.status(401).build());
     }
 }
