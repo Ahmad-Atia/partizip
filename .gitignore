@@ -68,3 +68,5 @@ build/
 # Application properties with sensitive data
 application-local.properties
 application-local.yml
+
+/frontend/node_modules

@@ -125,24 +125,26 @@ services:
       retries: 3
 
   # Frontend Service
-  frontend:
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile
-    container_name: partizip-frontend
-    ports:
-      - "5000:5000"  # Host:5000 → Container:5000
-    depends_on:
-      - api-gateway
-    networks:
-      - partizip-network
-    environment:
-      - REACT_APP_API_URL=http://localhost:3000
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+  # frontend:
+  #   build:
+  #     context: .
+  #     dockerfile: frontend/Dockerfile
+  #   container_name: partizip-frontend
+  #   ports:
+  #     - "5000:5000"  # Host:5000 → Container:5000
+  #   depends_on:
+  #     - api-gateway
+  #   networks:
+  #     - partizip-network
+  #   environment:
+  #      - EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
+  #       - REACT_NATIVE_PACKAGER_HOSTNAME=0.0.0.0
+  #       - EXPO_TOKEN=${EXPO_TOKEN}  # Add your Expo token here
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:5000"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
 
 networks:
   partizip-network:
