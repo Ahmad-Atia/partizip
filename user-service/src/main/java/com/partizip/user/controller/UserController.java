@@ -1,4 +1,3 @@
-
 package com.partizip.user.controller;
 
 import java.util.Date;
@@ -36,21 +35,40 @@ public class UserController {
         return "User Service is running";
     }
 
-    // User registration
+    // User registration - Updated with English field names
     @PostMapping("/register")
     public ResponseEntity<UserDto> registerUser(@RequestBody RegisterUserRequest request) {
         try {
+            // Validate required fields
+            if (request.getName() == null || request.getName().trim().isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+            if (request.getLastname() == null || request.getLastname().trim().isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+            if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+            if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+
             UserService.CreateUserRequest createRequest = new UserService.CreateUserRequest();
-            createRequest.setName(request.getVorname());
-            createRequest.setLastname(request.getNachname());
+            
+            createRequest.setName(request.getName());
+            createRequest.setLastname(request.getLastname());
             createRequest.setEmail(request.getEmail());
-            createRequest.setPasswordHashed(request.getPasswort()); // In real app, hash this
-            createRequest.setDateOfBirth(request.getGeb());
-            createRequest.setInterests(request.getInteressen());
+            createRequest.setPasswordHashed(request.getPassword()); // In real app, hash this
+            createRequest.setAddress(request.getAddress());
+            createRequest.setDateOfBirth(request.getDateOfBirth());
+            createRequest.setInterests(request.getInterests());
 
             UserDto userDto = userService.createUserDto(createRequest);
             return ResponseEntity.ok(userDto);
         } catch (Exception e) {
+            // Log the error for debugging
+            System.err.println("Registration error: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.badRequest().build();
         }
     }
@@ -81,7 +99,6 @@ public class UserController {
         return ResponseEntity.ok(userService.getAllUsersDto());
     }    
     
-    
     // Search users by name
     @GetMapping("/search")
     public ResponseEntity<List<UserDto>> searchUsers(@RequestParam("name") String name) {
@@ -98,33 +115,37 @@ public class UserController {
         return ResponseEntity.ok(new CredentialsResponse(null, null, false));
     }
 
-    // DTO Classes
+    // DTO Classes - Updated with English field names
     public static class RegisterUserRequest {
-        private String vorname;
-        private String nachname;
-        private Date geb;
-        private List<String> interessen;
+        private String name;
+        private String lastname;
         private String email;
-        private String passwort;
+        private String password;
+        private String address;
+        private Date dateOfBirth;
+        private List<String> interests;
 
         // Getters and setters
-        public String getVorname() { return vorname; }
-        public void setVorname(String vorname) { this.vorname = vorname; }
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
 
-        public String getNachname() { return nachname; }
-        public void setNachname(String nachname) { this.nachname = nachname; }
-
-        public Date getGeb() { return geb; }
-        public void setGeb(Date geb) { this.geb = geb; }
-
-        public List<String> getInteressen() { return interessen; }
-        public void setInteressen(List<String> interessen) { this.interessen = interessen; }
+        public String getLastname() { return lastname; }
+        public void setLastname(String lastname) { this.lastname = lastname; }
 
         public String getEmail() { return email; }
         public void setEmail(String email) { this.email = email; }
 
-        public String getPasswort() { return passwort; }
-        public void setPasswort(String passwort) { this.passwort = passwort; }
+        public String getPassword() { return password; }
+        public void setPassword(String password) { this.password = password; }
+
+        public String getAddress() { return address; }
+        public void setAddress(String address) { this.address = address; }
+
+        public Date getDateOfBirth() { return dateOfBirth; }
+        public void setDateOfBirth(Date dateOfBirth) { this.dateOfBirth = dateOfBirth; }
+
+        public List<String> getInterests() { return interests; }
+        public void setInterests(List<String> interests) { this.interests = interests; }
     }
 
     public static class CredentialsRequest {
