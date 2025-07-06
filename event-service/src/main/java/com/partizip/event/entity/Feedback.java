@@ -3,6 +3,8 @@ package com.partizip.event.entity;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -26,6 +28,7 @@ public class Feedback {
     @Column(nullable = false, columnDefinition = "BINARY(16)")
     private UUID userID;
     
+    
     @Column(length = 2000)
     private String content;
     
@@ -37,6 +40,7 @@ public class Feedback {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id", nullable = false)
+    @JsonBackReference
     private Event event;
     
     // Constructors

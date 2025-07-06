@@ -67,4 +67,8 @@ public class EventService {
         feedback.setEvent(event);
         return feedbackRepository.save(feedback);
     }
+    
+    public List<Feedback> getFeedbacksByEventId(UUID eventId) {
+        return feedbackRepository.findByEventId(eventId);
+    }
 }

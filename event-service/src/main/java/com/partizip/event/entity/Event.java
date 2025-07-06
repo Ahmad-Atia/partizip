@@ -1,6 +1,7 @@
 package com.partizip.event.entity;
 
 import com.partizip.event.enums.EventStatus;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -40,9 +41,11 @@ public class Event {
     private EventStatus status = EventStatus.PLANNED;
     
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference
     private Set<Participant> participants = new HashSet<>();
     
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference
     private Set<Feedback> feedbacks = new HashSet<>();
     
     // Constructors

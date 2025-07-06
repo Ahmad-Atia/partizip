@@ -73,4 +73,10 @@ public class EventController {
         Feedback addedFeedback = eventService.addFeedback(eventId, feedback);
         return ResponseEntity.ok(addedFeedback);
     }
+    
+    @GetMapping("/events/{eventId}/feedback")
+    public ResponseEntity<List<Feedback>> getFeedback(@PathVariable(value = "eventId") UUID eventId) {
+        List<Feedback> feedbacks = eventService.getFeedbacksByEventId(eventId);
+        return ResponseEntity.ok(feedbacks);
+    }
 }
