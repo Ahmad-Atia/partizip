@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Database
   mysql-db:
@@ -35,6 +33,9 @@ services:
       - USER_SERVICE_URL=http://user-service:3001
       - COMMUNITY_SERVICE_URL=http://community-service:3002
       - EVENT_SERVICE_URL=http://event-service:3003
+      - MQTT_ENABLED=true
+      - MQTT_BROKER_URL=tcp://mosquitto:1883
+      - MQTT_CLIENT_ID=api-gateway
     depends_on:
       mysql-db:
         condition: service_healthy
@@ -43,6 +44,8 @@ services:
       community-service:
         condition: service_healthy
       event-service:
+        condition: service_healthy
+      mosquitto:
         condition: service_healthy
     networks:
       - partizip-network
@@ -113,8 +116,13 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/partizip_db
       - SPRING_DATASOURCE_USERNAME=partizip_user
       - SPRING_DATASOURCE_PASSWORD=partizip_pass
+      - MQTT_ENABLED=true
+      - MQTT_BROKER_URL=tcp://mosquitto:1883
+      - MQTT_CLIENT_ID=partizip-event-service
     depends_on:
       mysql-db:
+        condition: service_healthy
+      mosquitto:
         condition: service_healthy
     networks:
       - partizip-network
@@ -123,6 +131,27 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # MQTT Broker (Mosquitto)
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: partizip-mosquitto
+    ports:
+      - "1883:1883"    # MQTT port
+      - "8083:8083"    # WebSocket port
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    networks:
+      - partizip-network
+    healthcheck:
+      test: ["CMD", "mosquitto_pub", "-h", "localhost", "-t", "test", "-m", "test"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+      
 
   # Frontend Service
   # frontend:

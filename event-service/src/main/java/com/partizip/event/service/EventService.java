@@ -7,6 +7,7 @@ import com.partizip.event.repository.EventRepository;
 import com.partizip.event.repository.ParticipantRepository;
 import com.partizip.event.repository.FeedbackRepository;
 import com.partizip.event.enums.ParticipationStatus;
+import com.partizip.event.mqtt.MqttEventObserver;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -27,8 +28,16 @@ public class EventService {
     @Autowired
     private FeedbackRepository feedbackRepository;
     
+    @Autowired(required = false)
+    private MqttEventObserver mqttEventObserver;
+    
     public Event createEvent(Event event) {
-        return eventRepository.save(event);
+        Event savedEvent = eventRepository.save(event);
+        // Notify observers about the new event
+        if (mqttEventObserver != null) {
+            mqttEventObserver.onEventCreated(savedEvent);
+        }
+        return savedEvent;
     }
     
     public Optional<Event> getEventById(UUID id) {
@@ -40,11 +49,20 @@ public class EventService {
     }
     
     public Event updateEvent(Event event) {
-        return eventRepository.save(event);
+        Event updatedEvent = eventRepository.save(event);
+        // Notify observers about the updated event
+        if (mqttEventObserver != null) {
+            mqttEventObserver.onEventUpdated(updatedEvent);
+        }
+        return updatedEvent;
     }
     
     public void deleteEvent(UUID id) {
         eventRepository.deleteById(id);
+        // Notify observers about the deleted event
+        if (mqttEventObserver != null) {
+            mqttEventObserver.onEventDeleted(id);
+        }
     }
     
     public void registerParticipant(UUID eventId, UUID userId) {

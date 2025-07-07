@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PartiZip - Event Notifications</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .connected { background-color: #d4edda; color: #155724; }
+        .disconnected { background-color: #f8d7da; color: #721c24; }
+        .connecting { background-color: #fff3cd; color: #856404; }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        .log-info { background-color: #d1ecf1; }
+        .log-success { background-color: #d4edda; }
+        .log-warning { background-color: #fff3cd; }
+        .log-error { background-color: #f8d7da; }
+        .event-display {
+            background-color: #e9ecef;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .event-item {
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .event-type {
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 3px;
+            color: white;
+            font-size: 12px;
+        }
+        .event-created { background-color: #28a745; }
+        .event-updated { background-color: #ffc107; color: #212529; }
+        .event-deleted { background-color: #dc3545; }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-danger { background-color: #dc3545; color: white; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin: 10px 0;
+        }
+        .stat-box {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            text-align: center;
+            flex: 1;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎉 PartiZip - Event Notifications</h1>
+        <p>Echtzeit-Benachrichtigungen über WebSocket vom API Gateway</p>
+        
+        <div id="connectionStatus" class="status disconnected">
+            ❌ Nicht verbunden
+        </div>
+        
+        <div class="controls">
+            <button id="connectBtn" class="btn-primary" onclick="connect()">Verbinden</button>
+            <button id="disconnectBtn" class="btn-danger" onclick="disconnect()">Trennen</button>
+            <button class="btn-secondary" onclick="clearLog()">Log löschen</button>
+            <button class="btn-secondary" onclick="clearEvents()">Events löschen</button>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <div id="totalEvents" class="stat-number">0</div>
+                <div class="stat-label">Total Events</div>
+            </div>
+            <div class="stat-box">
+                <div id="createdEvents" class="stat-number">0</div>
+                <div class="stat-label">Created</div>
+            </div>
+            <div class="stat-box">
+                <div id="updatedEvents" class="stat-number">0</div>
+                <div class="stat-label">Updated</div>
+            </div>
+            <div class="stat-box">
+                <div id="deletedEvents" class="stat-number">0</div>
+                <div class="stat-label">Deleted</div>
+            </div>
+        </div>
+        
+        <h3>📊 Live Events</h3>
+        <div id="eventDisplay" class="event-display">
+            <p style="text-align: center; color: #6c757d;">Keine Events empfangen</p>
+        </div>
+        
+        <h3>📝 WebSocket Log</h3>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        let ws = null;
+        let isConnected = false;
+        let eventCounts = { total: 0, created: 0, updated: 0, deleted: 0 };
+        
+        function connect() {
+            if (isConnected) return;
+            
+            updateStatus('connecting', '⏳ Verbinde...');
+            addLogEntry('info', 'Verbinde zu WebSocket...');
+            
+            ws = new WebSocket('ws://localhost:3000/ws/events');
+            
+            ws.onopen = function(event) {
+                isConnected = true;
+                updateStatus('connected', '✅ Verbunden');
+                addLogEntry('success', 'WebSocket erfolgreich verbunden');
+                
+                // Sende Ping für Keep-Alive
+                setInterval(() => {
+                    if (isConnected) {
+                        ws.send('PING');
+                    }
+                }, 30000);
+            };
+            
+            ws.onmessage = function(event) {
+                const message = event.data;
+                addLogEntry('info', 'Empfangen: ' + message);
+                parseAndDisplayMessage(message);
+            };
+            
+            ws.onclose = function(event) {
+                isConnected = false;
+                updateStatus('disconnected', '❌ Verbindung geschlossen');
+                addLogEntry('warning', 'WebSocket Verbindung geschlossen: ' + event.reason);
+            };
+            
+            ws.onerror = function(error) {
+                isConnected = false;
+                updateStatus('disconnected', '❌ Verbindungsfehler');
+                addLogEntry('error', 'WebSocket Fehler: ' + error);
+            };
+        }
+        
+        function disconnect() {
+            if (ws && isConnected) {
+                ws.close();
+                isConnected = false;
+                updateStatus('disconnected', '❌ Getrennt');
+                addLogEntry('info', 'WebSocket Verbindung getrennt');
+            }
+        }
+        
+        function updateStatus(statusClass, statusText) {
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.className = 'status ' + statusClass;
+            statusDiv.textContent = statusText;
+        }
+        
+        function addLogEntry(type, message) {
+            const log = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry log-' + type;
+            entry.textContent = new Date().toLocaleTimeString() + ' - ' + message;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        function parseAndDisplayMessage(message) {
+            const parts = message.split('|');
+            
+            if (parts[0] === 'WEBSOCKET_CONNECTED') {
+                addLogEntry('success', 'WebSocket Session ID: ' + parts[1]);
+                return;
+            }
+            
+            if (parts[0] === 'PONG') {
+                addLogEntry('info', 'Keep-Alive: PONG empfangen');
+                return;
+            }
+            
+            if (parts[0] === 'MQTT_EVENT') {
+                const topic = parts[1];
+                const mqttPayload = parts[2];
+                const timestamp = parts[3];
+                
+                displayEvent(topic, mqttPayload, timestamp);
+                updateEventCounts(topic);
+            }
+        }
+        
+        function displayEvent(topic, payload, timestamp) {
+            const eventDisplay = document.getElementById('eventDisplay');
+            
+            // Entferne "Keine Events" Nachricht
+            if (eventDisplay.querySelector('p')) {
+                eventDisplay.innerHTML = '';
+            }
+            
+            // Parse Event-Payload
+            const eventParts = payload.split('|');
+            if (eventParts.length < 6) return;
+            
+            const eventType = eventParts[0];
+            const eventId = eventParts[1];
+            const eventName = eventParts[2];
+            const eventDate = eventParts[3];
+            const eventLocation = eventParts[4];
+            
+            // Erstelle Event-Anzeige
+            const eventItem = document.createElement('div');
+            eventItem.className = 'event-item';
+            
+            let typeClass = '';
+            let typeText = '';
+            
+            if (eventType === 'EVENT_CREATED') {
+                typeClass = 'event-created';
+                typeText = 'ERSTELLT';
+            } else if (eventType === 'EVENT_UPDATED') {
+                typeClass = 'event-updated';
+                typeText = 'AKTUALISIERT';
+            } else if (eventType === 'EVENT_DELETED') {
+                typeClass = 'event-deleted';
+                typeText = 'GELÖSCHT';
+            }
+            
+            eventItem.innerHTML = `
+                <div>
+                    <span class="event-type ${typeClass}">${typeText}</span>
+                    <strong>${eventName}</strong> 
+                    <br>
+                    <small>📍 ${eventLocation} | 📅 ${eventDate}</small>
+                </div>
+                <div>
+                    <small>🆔 ${eventId}</small>
+                    <br>
+                    <small>⏰ ${new Date(parseInt(timestamp)).toLocaleString()}</small>
+                </div>
+            `;
+            
+            // Füge neues Event am Anfang hinzu
+            eventDisplay.insertBefore(eventItem, eventDisplay.firstChild);
+            
+            // Begrenze auf 10 Events
+            while (eventDisplay.children.length > 10) {
+                eventDisplay.removeChild(eventDisplay.lastChild);
+            }
+        }
+        
+        function updateEventCounts(topic) {
+            eventCounts.total++;
+            
+            if (topic === 'events/created') {
+                eventCounts.created++;
+            } else if (topic === 'events/updated') {
+                eventCounts.updated++;
+            } else if (topic === 'events/deleted') {
+                eventCounts.deleted++;
+            }
+            
+            document.getElementById('totalEvents').textContent = eventCounts.total;
+            document.getElementById('createdEvents').textContent = eventCounts.created;
+            document.getElementById('updatedEvents').textContent = eventCounts.updated;
+            document.getElementById('deletedEvents').textContent = eventCounts.deleted;
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+        
+        function clearEvents() {
+            document.getElementById('eventDisplay').innerHTML = 
+                '<p style="text-align: center; color: #6c757d;">Keine Events empfangen</p>';
+            eventCounts = { total: 0, created: 0, updated: 0, deleted: 0 };
+            updateEventCounts('');
+        }
+        
+        // Auto-connect on page load
+        window.addEventListener('load', function() {
+            addLogEntry('info', 'PartiZip WebSocket Client bereit');
+            connect();
+        });
+    </script>
+</body>
+</html>

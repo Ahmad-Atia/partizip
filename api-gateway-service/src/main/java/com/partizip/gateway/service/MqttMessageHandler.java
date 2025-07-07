@@ -1,68 +1,56 @@
 package com.partizip.gateway.service;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.partizip.gateway.websocket.ReactiveEventWebSocketHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Consumer;
-
+/**
+ * Legacy MQTT Message Handler - jetzt umgeleitet auf die neue Reactive WebSocket-Integration
+ * Behält die API-Kompatibilität bei, verwendet aber die neue MQTT-Integration
+ */
 @Service
 public class MqttMessageHandler {
     
-    @Value("${mqtt.broker.url:tcp://localhost:1883}")
-    private String brokerUrl;
+    private static final Logger logger = LoggerFactory.getLogger(MqttMessageHandler.class);
     
-    @Value("${mqtt.client.id:api-gateway-client}")
-    private String clientId;
-    
-    private final Map<String, Consumer<String>> subscriptions = new HashMap<>();
+    @Autowired(required = false)
+    private ReactiveEventWebSocketHandler webSocketHandler;
     
     public void publish(String topic, String payload) {
-        // TODO: Implement actual MQTT publishing with Eclipse Paho or Spring Integration
-        System.out.println("Publishing to topic '" + topic + "' on broker " + brokerUrl + 
-                          " with payload: " + payload);
-        
-        // Simulate message delivery to local subscribers for testing
-        if (subscriptions.containsKey(topic)) {
-            subscriptions.get(topic).accept(payload);
-        }
+        logger.info("📤 Legacy MQTT publish: [{}] {}", topic, payload);
+        // Diese Methode ist jetzt deprecated - Event Service publisht direkt
+        logger.warn("⚠️  Use Event Service for MQTT publishing instead of API Gateway");
     }
     
     public void subscribe(String topic) {
-        // TODO: Implement actual MQTT subscription
-        System.out.println("Subscribing to topic '" + topic + "' on broker " + brokerUrl);
+        logger.info("📥 Legacy MQTT subscribe: {}", topic);
+        logger.info("ℹ️  MQTT subscription is now handled automatically by MqttGatewayConfig");
     }
     
-    public void onMessage(String topic, Consumer<String> callback) {
-        subscriptions.put(topic, callback);
-        subscribe(topic);
-        System.out.println("Registered callback for topic: " + topic);
-    }
-    
-    public void unsubscribe(String topic) {
-        subscriptions.remove(topic);
-        System.out.println("Unsubscribed from topic: " + topic);
-    }
-    
-    // Convenience methods for common PartiZip events
+    // Legacy compatibility methods - now logs warnings
     public void publishEventNotification(String eventId, String message) {
+        logger.warn("⚠️  publishEventNotification is deprecated. Use Event Service directly.");
         publish("partizip/events/" + eventId, message);
     }
     
     public void publishUserNotification(String userId, String message) {
+        logger.warn("⚠️  publishUserNotification is deprecated. Use User Service directly.");
         publish("partizip/users/" + userId, message);
     }
     
     public void publishCommunityNotification(String communityId, String message) {
+        logger.warn("⚠️  publishCommunityNotification is deprecated. Use Community Service directly.");
         publish("partizip/communities/" + communityId, message);
     }
     
-    public void subscribeToEventNotifications(String eventId, Consumer<String> callback) {
-        onMessage("partizip/events/" + eventId, callback);
+    // Status methods
+    public boolean isWebSocketIntegrationActive() {
+        return webSocketHandler != null && webSocketHandler.getConnectedClientCount() > 0;
     }
     
-    public void subscribeToUserNotifications(String userId, Consumer<String> callback) {
-        onMessage("partizip/users/" + userId, callback);
+    public int getConnectedWebSocketClients() {
+        return webSocketHandler != null ? webSocketHandler.getConnectedClientCount() : 0;
     }
 }

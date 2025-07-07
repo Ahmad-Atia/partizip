@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MQTT Event Monitor - Partizip</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: #ecf0f1;
+            border-bottom: 1px solid #bdc3c7;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e74c3c;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-dot.connected {
+            background: #2ecc71;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .controls {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .control-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .control-group label {
+            font-weight: bold;
+            min-width: 120px;
+        }
+        
+        .control-group input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.3);
+        }
+        
+        .topics-section {
+            padding: 20px;
+        }
+        
+        .topic-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .topic-item.subscribed {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+        
+        .messages-container {
+            padding: 20px;
+        }
+        
+        .messages {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f8f9fa;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+            background: white;
+        }
+        
+        .message.event-created {
+            border-left-color: #28a745;
+            background: #f0fff4;
+        }
+        
+        .message.event-updated {
+            border-left-color: #ffc107;
+            background: #fffef0;
+        }
+        
+        .message.event-deleted {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .message-topic {
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .message-time {
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .message-content {
+            white-space: pre-wrap;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            padding: 15px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        
+        .clear-btn {
+            float: right;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 MQTT Event Monitor</h1>
+            <p>Real-time Event Notifications für Partizip Event Service</p>
+        </div>
+        
+        <div class="status-bar">
+            <div class="status">
+                <div class="status-dot" id="connectionStatus"></div>
+                <span id="connectionText">Nicht verbunden</span>
+            </div>
+            <div>
+                <span id="messageCount">0</span> Nachrichten empfangen
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="brokerUrl">MQTT Broker:</label>
+                <input type="text" id="brokerUrl" value="ws://localhost:8083" placeholder="ws://localhost:8083">
+            </div>
+            <div class="control-group">
+                <label for="clientId">Client ID:</label>
+                <input type="text" id="clientId" value="mqtt-test-client" placeholder="mqtt-test-client">
+            </div>
+            <div class="control-group">
+                <button class="btn btn-primary" onclick="connectMQTT()">Verbinden</button>
+                <button class="btn btn-danger" onclick="disconnectMQTT()">Trennen</button>
+                <button class="btn btn-success" onclick="testEventAPI()">Test Event erstellen</button>
+            </div>
+        </div>
+        
+        <div class="topics-section">
+            <h3>📡 Überwachte Topics</h3>
+            <div class="topic-item" id="topic-created">
+                <span><strong>events/created</strong> - Neue Events</span>
+                <span id="created-count">0</span>
+            </div>
+            <div class="topic-item" id="topic-updated">
+                <span><strong>events/updated</strong> - Geänderte Events</span>
+                <span id="updated-count">0</span>
+            </div>
+            <div class="topic-item" id="topic-deleted">
+                <span><strong>events/deleted</strong> - Gelöschte Events</span>
+                <span id="deleted-count">0</span>
+            </div>
+        </div>
+        
+        <div class="messages-container">
+            <h3>📨 Empfangene Nachrichten</h3>
+            <button class="btn btn-danger clear-btn" onclick="clearMessages()">Löschen</button>
+            <div class="messages" id="messages"></div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="totalMessages">0</div>
+                <div class="stat-label">Gesamt</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="createdEvents">0</div>
+                <div class="stat-label">Erstellt</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="updatedEvents">0</div>
+                <div class="stat-label">Geändert</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="deletedEvents">0</div>
+                <div class="stat-label">Gelöscht</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let client = null;
+        let messageCount = 0;
+        let eventStats = {
+            created: 0,
+            updated: 0,
+            deleted: 0
+        };
+
+        function connectMQTT() {
+            const brokerUrl = document.getElementById('brokerUrl').value;
+            const clientId = document.getElementById('clientId').value;
+            
+            try {
+                client = mqtt.connect(brokerUrl, {
+                    clientId: clientId,
+                    clean: true,
+                    connectTimeout: 4000,
+                    reconnectPeriod: 1000,
+                });
+
+                client.on('connect', function () {
+                    console.log('MQTT Connected');
+                    updateConnectionStatus(true);
+                    
+                    // Subscribe to all event topics
+                    client.subscribe('events/+', function (err) {
+                        if (!err) {
+                            console.log('Subscribed to events/+');
+                            updateTopicStatus('created', true);
+                            updateTopicStatus('updated', true);
+                            updateTopicStatus('deleted', true);
+                        } else {
+                            console.error('Subscribe error:', err);
+                        }
+                    });
+                });
+
+                client.on('message', function (topic, message) {
+                    handleMessage(topic, message.toString());
+                });
+
+                client.on('error', function (error) {
+                    console.error('MQTT Error:', error);
+                    updateConnectionStatus(false);
+                    addMessage('ERROR', 'Verbindungsfehler: ' + error.message, 'error');
+                });
+
+                client.on('close', function () {
+                    console.log('MQTT Disconnected');
+                    updateConnectionStatus(false);
+                });
+
+            } catch (error) {
+                console.error('Connection error:', error);
+                addMessage('ERROR', 'Verbindungsfehler: ' + error.message, 'error');
+            }
+        }
+
+        function disconnectMQTT() {
+            if (client) {
+                client.end();
+                client = null;
+                updateConnectionStatus(false);
+                updateTopicStatus('created', false);
+                updateTopicStatus('updated', false);
+                updateTopicStatus('deleted', false);
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusDot = document.getElementById('connectionStatus');
+            const statusText = document.getElementById('connectionText');
+            
+            if (connected) {
+                statusDot.classList.add('connected');
+                statusText.textContent = 'Verbunden';
+            } else {
+                statusDot.classList.remove('connected');
+                statusText.textContent = 'Nicht verbunden';
+            }
+        }
+
+        function updateTopicStatus(topic, subscribed) {
+            const topicElement = document.getElementById('topic-' + topic);
+            if (subscribed) {
+                topicElement.classList.add('subscribed');
+            } else {
+                topicElement.classList.remove('subscribed');
+            }
+        }
+
+        function handleMessage(topic, message) {
+            messageCount++;
+            document.getElementById('messageCount').textContent = messageCount;
+            
+            try {
+                // Parse simple pipe-separated format: TYPE|ID|NAME|DATE|LOCATION|PUBLIC|TIMESTAMP
+                let data;
+                if (message.includes('|')) {
+                    const parts = message.split('|');
+                    if (parts[0] === 'EVENT_DELETED') {
+                        data = {
+                            type: parts[0],
+                            eventId: parts[1],
+                            timestamp: parts[2]
+                        };
+                    } else {
+                        data = {
+                            type: parts[0],
+                            eventId: parts[1],
+                            eventName: parts[2],
+                            eventDate: parts[3],
+                            eventLocation: parts[4],
+                            isPublic: parts[5] === 'true',
+                            timestamp: parts[6]
+                        };
+                    }
+                } else {
+                    // Fallback for any other format
+                    data = { type: 'UNKNOWN', message: message };
+                }
+                
+                // Update statistics
+                if (topic.includes('created')) {
+                    eventStats.created++;
+                    document.getElementById('created-count').textContent = eventStats.created;
+                    document.getElementById('createdEvents').textContent = eventStats.created;
+                } else if (topic.includes('updated')) {
+                    eventStats.updated++;
+                    document.getElementById('updated-count').textContent = eventStats.updated;
+                    document.getElementById('updatedEvents').textContent = eventStats.updated;
+                } else if (topic.includes('deleted')) {
+                    eventStats.deleted++;
+                    document.getElementById('deleted-count').textContent = eventStats.deleted;
+                    document.getElementById('deletedEvents').textContent = eventStats.deleted;
+                }
+                
+                document.getElementById('totalMessages').textContent = messageCount;
+                
+                // Format message for display
+                const formattedMessage = JSON.stringify(data, null, 2);
+                addMessage(topic, formattedMessage, getMessageClass(topic));
+                
+            } catch (error) {
+                console.error('Message parsing error:', error);
+                addMessage(topic, message, 'error');
+            }
+        }
+
+        function getMessageClass(topic) {
+            if (topic.includes('created')) return 'event-created';
+            if (topic.includes('updated')) return 'event-updated';
+            if (topic.includes('deleted')) return 'event-deleted';
+            return '';
+        }
+
+        function addMessage(topic, content, messageClass = '') {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ' + messageClass;
+            
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('de-DE');
+            
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <span class="message-topic">${topic}</span>
+                    <span class="message-time">${timeString}</span>
+                </div>
+                <div class="message-content">${content}</div>
+            `;
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+            messageCount = 0;
+            eventStats = { created: 0, updated: 0, deleted: 0 };
+            
+            document.getElementById('messageCount').textContent = '0';
+            document.getElementById('created-count').textContent = '0';
+            document.getElementById('updated-count').textContent = '0';
+            document.getElementById('deleted-count').textContent = '0';
+            document.getElementById('totalMessages').textContent = '0';
+            document.getElementById('createdEvents').textContent = '0';
+            document.getElementById('updatedEvents').textContent = '0';
+            document.getElementById('deletedEvents').textContent = '0';
+        }
+
+        function testEventAPI() {
+            const testEvent = {
+                name: "Test Event " + new Date().toLocaleTimeString(),
+                description: "Test Event für MQTT Observer Pattern",
+                date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                location: "Test Location",
+                creatorID: "123e4567-e89b-12d3-a456-426614174000",
+                isPublic: true
+            };
+
+            fetch('http://localhost:3003/api/events', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(testEvent)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Event created:', data);
+                addMessage('API', 'Test Event erfolgreich erstellt: ' + data.name, 'event-created');
+            })
+            .catch(error => {
+                console.error('Error creating event:', error);
+                addMessage('ERROR', 'Fehler beim Erstellen des Events: ' + error.message, 'error');
+            });
+        }
+
+        // Initialize connection status
+        updateConnectionStatus(false);
+        
+        // Add welcome message
+        addMessage('SYSTEM', 'MQTT Event Monitor gestartet. Klicke auf "Verbinden" um zu beginnen.', '');
+    </script>
+</body>
+</html>
