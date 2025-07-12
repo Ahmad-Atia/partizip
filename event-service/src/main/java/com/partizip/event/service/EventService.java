@@ -7,7 +7,8 @@ import com.partizip.event.repository.EventRepository;
 import com.partizip.event.repository.ParticipantRepository;
 import com.partizip.event.repository.FeedbackRepository;
 import com.partizip.event.enums.ParticipationStatus;
-import com.partizip.event.mqtt.MqttEventObserver;
+import com.partizip.event.observer.EventSubject;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -27,16 +28,17 @@ public class EventService {
     
     @Autowired
     private FeedbackRepository feedbackRepository;
-    
-    @Autowired(required = false)
-    private MqttEventObserver mqttEventObserver;
+
+    @Autowired
+    private EventSubject eventSubject;
     
     public Event createEvent(Event event) {
         Event savedEvent = eventRepository.save(event);
-        // Notify observers about the new event
-        if (mqttEventObserver != null) {
-            mqttEventObserver.onEventCreated(savedEvent);
-        }
+        // // Notify observers about the new event
+        // if (mqttEventObserver != null) {
+        //     mqttEventObserver.onEventCreated(savedEvent);
+        // }
+         eventSubject.notifyEventCreated(savedEvent); // Notify observers using EventSubject
         return savedEvent;
     }
     
@@ -51,18 +53,14 @@ public class EventService {
     public Event updateEvent(Event event) {
         Event updatedEvent = eventRepository.save(event);
         // Notify observers about the updated event
-        if (mqttEventObserver != null) {
-            mqttEventObserver.onEventUpdated(updatedEvent);
-        }
+        eventSubject.notifyEventUpdated(updatedEvent);
         return updatedEvent;
     }
     
     public void deleteEvent(UUID id) {
         eventRepository.deleteById(id);
         // Notify observers about the deleted event
-        if (mqttEventObserver != null) {
-            mqttEventObserver.onEventDeleted(id);
-        }
+        eventSubject.notifyEventDeleted(id);
     }
     
     public void registerParticipant(UUID eventId, UUID userId) {
