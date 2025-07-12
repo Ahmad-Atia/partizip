@@ -17,6 +17,9 @@ public class UserService {
     
     @Autowired
     private UserRepository userRepository;
+    
+    // UserDto instance for factory method
+    private UserDto userDtoFactory = new UserDto();
 
     public User createUser(CreateUserRequest userData) {
         // Check if email already exists
@@ -163,30 +166,30 @@ public class UserService {
     // DTO-based methods for clean API responses
     public UserDto createUserDto(CreateUserRequest userData) {
         User user = createUser(userData);
-        return UserDto.fromUser(user);
+        return userDtoFactory.factory(user);
     }
 
     public UserDto getUserDto(String userId) {
         Optional<User> userOpt = userRepository.findById(userId);
-        return userOpt.map(UserDto::fromUser).orElse(null);
+        return userOpt.map(userDtoFactory::factory).orElse(null);
     }
 
     public UserDto getUserDtoByEmail(String email) {
         Optional<User> userOpt = userRepository.findByEmail(email);
-        return userOpt.map(UserDto::fromUser).orElse(null);
+        return userOpt.map(userDtoFactory::factory).orElse(null);
     }
 
     public List<UserDto> getAllUsersDto() {
         List<User> users = userRepository.findAll();
         return users.stream()
-                   .map(UserDto::fromUser)
+                   .map(userDtoFactory::factory)
                    .collect(Collectors.toList());
     }
 
     public List<UserDto> searchUsersByNameDto(String name) {
         List<User> users = userRepository.findByNameContaining(name);
         return users.stream()
-                   .map(UserDto::fromUser)
+                   .map(userDtoFactory::factory)
                    .collect(Collectors.toList());
     }
 }

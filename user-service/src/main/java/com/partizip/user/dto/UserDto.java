@@ -4,12 +4,14 @@ import java.util.Date;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.partizip.user.factory.UserDtoCreator;
 
 /**
  * Data Transfer Object for User entity.
  * Used for API responses to avoid JSON serialization issues and to hide sensitive data.
+ * Implements UserDtoCreator interface for Factory Method Pattern.
  */
-public class UserDto {
+public class UserDto implements UserDtoCreator {
     
     private String userID;
     private String name;
@@ -35,8 +37,13 @@ public class UserDto {
         // Empty constructor for framework usage
     }
 
-    // Factory method to create UserDto from individual fields
-    public static UserDto fromUser(com.partizip.user.entity.User user) {
+    // Factory method implementation from UserDtoCreator interface
+    @Override
+    public UserDto factory(com.partizip.user.entity.User user) {
+        if (user == null) {
+            return null;
+        }
+        
         UserDto dto = new UserDto();
         dto.userID = user.getUserID();
         dto.name = user.getName();
